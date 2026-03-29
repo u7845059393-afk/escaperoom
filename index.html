@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Escape Room 20 Pokoi</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #1d1d1d;
+      color: #eee;
+    }
+
+    .wrap {
+      display: flex;
+      min-height: 100vh;
+      gap: 10px;
+      padding: 10px;
+      box-sizing: border-box;
+      flex-wrap: wrap;
+    }
+
+    .left, .right {
+      background: #2b2b2b;
+      border: 1px solid #555;
+      padding: 12px;
+      box-sizing: border-box;
+    }
+
+    .left {
+      width: 290px;
+      min-height: 100%;
+    }
+
+    .right {
+      flex: 1;
+      min-width: 300px;
+    }
+
+    h1, h2, h3 {
+      margin: 0 0 10px 0;
+    }
+
+    .box {
+      background: #3a3a3a;
+      border: 1px solid #666;
+      padding: 10px;
+      margin-bottom: 10px;
+    }
+
+    .small {
+      font-size: 14px;
+      color: #ccc;
+    }
+
+    .stat {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 6px;
+      font-size: 14px;
+    }
+
+    .items, .log, .nav {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .item, .logitem {
+      background: #444;
+      border: 1px solid #666;
+      padding: 8px;
+      font-size: 14px;
+    }
+
+    .nav {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 5px;
+    }
+
+    button, input {
+      font: inherit;
+    }
+
+    button {
+      border: 1px solid #777;
+      background: #5b5b5b;
+      color: white;
+      padding: 8px 10px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background: #686868;
+    }
+
+    button.active {
+      background: #7a5cff;
+    }
+
+    button.locked {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+
+    .roomTitle {
+      font-size: 24px;
+      margin-bottom: 5px;
+    }
+
+    .roomText, .hint {
+      line-height: 1.5;
+      font-size: 15px;
+    }
+
+    .answerRow {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 10px;
+    }
+
+    input {
+      padding: 9px;
+      border: 1px solid #777;
+      background: #111;
+      color: #fff;
+      min-width: 220px;
+      flex: 1;
+    }
+
+    .status {
+      margin-top: 10px;
+      min-height: 20px;
+      color: #ffd45c;
+    }
+
+    .bad {
+      color: #ff8b8b;
+    }
+
+    .good {
+      color: #84ffb4;
+    }
+
+    .footerBtns {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 12px;
+    }
+
+    .overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.7);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .overlay.show {
+      display: flex;
+    }
+
+    .winBox {
+      background: #2c2c2c;
+      border: 2px solid #999;
+      max-width: 700px;
+      width: 100%;
+      padding: 20px;
+    }
+
+    @media (max-width: 900px) {
+      .left {
+        width: 100%;
+      }
+      .nav {
+        grid-template-columns: repeat(4, 1fr);
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="left">
+      <h1>Escape Room 20 Pokoi</h1>
+      <p class="small">Taka gra trochę na szybko, ale działa. Przechodzisz pokoje, wpisujesz odpowiedzi i zbierasz rzeczy.</p>
+
+      <div class="box">
+        <div class="stat"><span>Pokój</span><span id="roomNum">1 / 20</span></div>
+        <div class="stat"><span>Punkty</span><span id="score">0</span></div>
+        <div class="stat"><span>Ruchy</span><span id="moves">0</span></div>
+        <div class="stat"><span>Stan</span><span id="state">normalnie</span></div>
+      </div>
+
+      <div class="box">
+        <h3>Ekwipunek</h3>
+        <div class="items" id="items"></div>
+      </div>
+
+      <div class="box">
+        <h3>Log</h3>
+        <div class="log" id="log"></div>
+      </div>
+
+      <div class="box">
+        <h3>Pokoi</h3>
+        <div class="nav" id="nav"></div>
+      </div>
+    </div>
+
+    <div class="right">
+      <div class="box">
+        <div class="roomTitle" id="title">Pokój 1 - Hol</div>
+        <div class="small" id="sub">Start.</div>
+      </div>
+
+      <div class="box">
+        <div class="roomText" id="story"></div>
+      </div>
+
+      <div class="box">
+        <h3 id="question"></h3>
+        <div id="puzzle"></div>
+        <div class="status" id="status"></div>
+      </div>
+
+      <div class="box">
+        <div class="hint" id="hint"></div>
+      </div>
+
+      <div class="box">
+        <div class="footerBtns">
+          <button id="prev">Poprzedni</button>
+          <button id="next">Następny</button>
+          <button id="solve">Zaznacz jako zrobione</button>
+          <button id="reset">Reset</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="overlay" id="overlay">
+    <div class="winBox">
+      <h2>Udało się</h2>
+      <p>Dotarłeś do końca. Trochę chaotycznie, ale jednak przeszłeś wszystkie 20 pokoi i wyszedłeś.</p>
+      <p id="finalInfo"></p>
+      <button id="again">Jeszcze raz</button>
+    </div>
+  </div>
+
+  <script>
+    const rooms = [
+      {t:'Pokój 1 - Hol', s:'Start.', st:'Stoisz w dziwnym holu. Na ścianie coś miga i jest cały bałagan.', q:'Kliknij dobre wejscie.', h:'Spróbuj czegoś prostego.', type:'choose', c:[['Przeszukaj podłogę',1,true,'plan'],['Krzycz na ściany',0,false,''],['Nic nie rób',0,false,'']], n:[2]},
+      {t:'Pokój 2 - Szafa', s:'Jest kartka.', st:'W szafie leży kartka i mały kluczyk.', q:'Ile to 2+4+6?', h:'Dodaj po prostu.', type:'input', a:'12', r:'Klucz', p:10, m:'Masz klucz.', n:[3]},
+      {t:'Pokój 3 - Lampy', s:'Trochę ciemno.', st:'Na ścianie trzy przełączniki, ale podpisy trochę krzywe.', q:'Wpisz L-S-P', h:'Lewy, środek, prawy.', type:'input', a:'L-S-P', r:'Bezpiecznik', p:10, m:'Znalazłeś bezpiecznik.', n:[4]},
+      {t:'Pokój 4 - Prąd', s:'Panel bez zasilania.', st:'Bezpiecznik pasuje, panel odpala.', q:'Ile jest 7x3-5?', h:'Mnożenie najpierw.', type:'input', a:'16', r:'Zasilanie', p:10, m:'Panel działa.', n:[5]},
+      {t:'Pokój 5 - Książki', s:'Mnóstwo kurzu.', st:'Jest książka z napisem PIĘĆ.', q:'Ile liter ma słowo PIĘĆ?', h:'Policz normalnie.', type:'input', a:'4', r:'Kartka', p:10, m:'Masz kartkę.', n:[6]},
+      {t:'Pokój 6 - Warsztat', s:'Narzędzia wszędzie.', st:'Skrzynia ma symbol.', q:'Który symbol?', h:'Gwiazdka wygląda podejrzanie.', type:'choose', c:[['Gwiazda',1,true,'Śrubokręt'],['Koło',0,false,''],['Pasek',0,false,'']], n:[7]},
+      {t:'Pokój 7 - Lustra', s:'Trochę dziwnie.', st:'Wszystko się odbija i ciężko patrzeć.', q:'7 razy 2 = ?', h:'Proste liczenie.', type:'input', a:'14', r:'Karta A', p:10, m:'Masz kartę A.', n:[8]},
+      {t:'Pokój 8 - Laboratorium', s:'Kolby na stole.', st:'Jest tekst: najpierw zimno, potem życie.', q:'Jaki kolor?', h:'Niebieski chyba pasuje.', type:'choose', c:[['Niebieski',1,true,'Próbka'],['Czerwony',0,false,''],['Żółty',0,false,'']], n:[9]},
+      {t:'Pokój 9 - Magazyn', s:'Stare pudła.', st:'Skrzynia ma kod. Notatka mówi o najmniejszej złożonej liczbie.', q:'Jaka to liczba?', h:'2 nie jest złożona.', type:'input', a:'4', r:'Klucz serwisowy', p:10, m:'Masz klucz serwisowy.', n:[10]},
+      {t:'Pokój 10 - Maszyny', s:'Głośno.', st:'Koła zębate stoją, trzeba coś wpisać.', q:'2, 4, 8, 16, ?', h:'Każda liczba jest większa dwa razy.', type:'input', a:'32', r:'Przepustka', p:10, m:'Masz przepustkę.', n:[11]},
+      {t:'Pokój 11 - Ogród', s:'Sztuczne rośliny.', st:'Tabliczka mówi o równowadze.', q:'Ile boków ma kwadrat?', h:'To jest łatwe.', type:'input', a:'4', r:'Nasiono', p:10, m:'Dostałeś nasiono.', n:[12]},
+      {t:'Pokój 12 - Muzyka', s:'Echo.', st:'Są klawisze i podpis.', q:'Wpisz 1-2-3', h:'Po kolei.', type:'input', a:'1-2-3', r:'Klawisz', p:10, m:'Masz klawisz.', n:[13]},
+      {t:'Pokój 13 - Próba', s:'Pamięć.', st:'Kolory: czerwony, zielony, czerwony, niebieski.', q:'Wpisz C-Z-C-N', h:'Pierwsze litery.', type:'input', a:'C-Z-C-N', r:'Odznaka', p:10, m:'Dostałeś odznakę.', n:[14]},
+      {t:'Pokój 14 - Mapa', s:'Na stole mapa.', st:'Słońce wschodzi gdzieś tam.', q:'Który kierunek?', h:'Wschód.', type:'choose', c:[['Wschód',1,true,'Kompas'],['Zachód',0,false,''],['Północ',0,false,'']], n:[15]},
+      {t:'Pokój 15 - Brama wstępna', s:'Duże drzwi.', st:'Coś tam trzeba policzyć.', q:'15+5=?', h:'To będzie 20.', type:'input', a:'20', r:'Kod 20', p:10, m:'Masz kod 20.', n:[16]},
+      {t:'Pokój 16 - Lód', s:'Zimno.', st:'Wszystko zamarzło.', q:'Co niższe: -5 czy 3?', h:'Minus jest niżej.', type:'input', a:'-5', r:'Lodowy rdzeń', p:10, m:'Masz lodowy rdzeń.', n:[17]},
+      {t:'Pokój 17 - Serwery', s:'Migają lampki.', st:'Na monitorze pytanie.', q:'2 diody x 8 serwerów = ?', h:'Mnożenie.', type:'input', a:'16', r:'Token admina', p:10, m:'Masz token admina.', n:[18]},
+      {t:'Pokój 18 - Dokumenty', s:'Papier wszędzie.', st:'Jest tekst: najpierw prawda, potem wybór.', q:'TAK czy NIE?', h:'No chyba TAK.', type:'choose', c:[['TAK',1,true,'Pieczęć'],['NIE',0,false,'']], n:[19]},
+      {t:'Pokój 19 - Zegar', s:'Czas leci.', st:'Zegar bez wskazówek, bardzo normalne.', q:'Ile cyfr ma 1000?', h:'Policz cyfry.', type:'input', a:'4', r:'Ostatni fragment', p:10, m:'Prawie koniec.', n:[20]},
+      {t:'Pokój 20 - Wyjście', s:'Finał.', st:'Jesteś przy bramie i to już prawie wszystko.', q:'Czy masz komplet i chcesz wyjść?', h:'Wpisz tak.', type:'final', a:'tak', p:20, m:'Brama otwarta.', n:[]}
+    ];
+
+    let state = {
+      room: 0,
+      score: 0,
+      moves: 0,
+      done: Array(20).fill(false),
+      inv: [],
+      open: new Set([1]),
+      win: false
+    };
+
+    const el = id => document.getElementById(id);
+    const roomNum = el('roomNum');
+    const score = el('score');
+    const moves = el('moves');
+    const stateTxt = el('state');
+    const items = el('items');
+    const log = el('log');
+    const nav = el('nav');
+    const title = el('title');
+    const sub = el('sub');
+    const story = el('story');
+    const question = el('question');
+    const puzzle = el('puzzle');
+    const hint = el('hint');
+    const status = el('status');
+    const overlay = el('overlay');
+    const finalInfo = el('finalInfo');
+
+    function addLog(text) {
+      const d = document.createElement('div');
+      d.className = 'logitem';
+      d.textContent = text;
+      log.prepend(d);
+    }
+
+    function addItem(t) {
+      if (!state.inv.includes(t)) state.inv.push(t);
+    }
+
+    function showStatus(t, good) {
+      status.textContent = t;
+      status.className = 'status ' + (good ? 'good' : 'bad');
+    }
+
+    function current() {
+      return rooms[state.room];
+    }
+
+    function norm(x) {
+      return String(x).trim().toLowerCase();
+    }
+
+    function renderItems() {
+      items.innerHTML = '';
+      if (state.inv.length === 0) {
+        const d = document.createElement('div');
+        d.className = 'item';
+        d.textContent = 'nic jeszcze';
+        items.appendChild(d);
+      } else {
+        state.inv.forEach(i => {
+          const d = document.createElement('div');
+          d.className = 'item';
+          d.textContent = i;
+          items.appendChild(d);
+        });
+      }
+    }
+
+    function renderNav() {
+      nav.innerHTML = '';
+      for (let i = 0; i < 20; i++) {
+        const b = document.createElement('button');
+        b.textContent = i + 1;
+        if (i === state.room) b.classList.add('active');
+        if (!(state.open.has(i + 1) || i === state.room || state.done[i])) b.classList.add('locked');
+        b.disabled = !(state.open.has(i + 1) || i === state.room || state.done[i]);
+        b.onclick = () => { state.room = i; state.moves++; render(); };
+        nav.appendChild(b);
+      }
+    }
+
+    function solveRoom(room, pts, reward) {
+      if (!state.done[state.room]) {
+        state.done[state.room] = true;
+        state.score += pts || 0;
+        if (reward) addItem(reward);
+        (room.n || []).forEach(x => state.open.add(x));
+        addLog('Pokój ' + (state.room + 1) + ' zaliczony.');
+        if (state.room === 19) {
+          state.win = true;
+          overlay.classList.add('show');
+          finalInfo.textContent = 'Punkty: ' + state.score + ' | Ruchy: ' + state.moves + ' | Itemy: ' + state.inv.length;
+        }
+      }
+    }
+
+    function checkAnswer(val) {
+      const room = current();
+      state.moves++;
+      if (norm(val) === norm(room.a)) {
+        showStatus(room.m || 'dobrze', true);
+        solveRoom(room, room.p, room.r);
+      } else {
+        showStatus('Źle, spróbuj jeszcze raz.', false);
+        addLog('Błędna odpowiedź w pokoju ' + (state.room + 1));
+      }
+      render();
+    }
+
+    function renderPuzzle() {
+      const room = current();
+      puzzle.innerHTML = '';
+      question.textContent = room.q;
+      hint.textContent = 'Podpowiedź: ' + room.h;
+      status.textContent = '';
+      status.className = 'status';
+
+      if (room.type === 'input' || room.type === 'final') {
+        const row = document.createElement('div');
+        row.className = 'answerRow';
+        const inp = document.createElement('input');
+        inp.type = 'text';
+        inp.placeholder = 'wpisz odpowiedź';
+        const btn = document.createElement('button');
+        btn.textContent = 'Sprawdź';
+        btn.onclick = () => checkAnswer(inp.value);
+        inp.onkeydown = e => { if (e.key === 'Enter') btn.click(); };
+        row.appendChild(inp);
+        row.appendChild(btn);
+        puzzle.appendChild(row);
+      } else if (room.type === 'choose') {
+        const row = document.createElement('div');
+        row.className = 'answerRow';
+        room.c.forEach(choice => {
+          const btn = document.createElement('button');
+          btn.textContent = choice[0];
+          btn.onclick = () => {
+            state.moves++;
+            if (choice[2]) {
+              showStatus(choice[3] ? ('Dobrze: ' + choice[3]) : 'dobrze', true);
+              solveRoom(room, choice[1], choice[3]);
+            } else {
+              showStatus('Nie to.', false);
+              addLog('Zły wybór w pokoju ' + (state.room + 1));
+            }
+            render();
+          };
+          row.appendChild(btn);
+        });
+        puzzle.appendChild(row);
+      }
+    }
+
+    function render() {
+      const room = current();
+      roomNum.textContent = (state.room + 1) + ' / 20';
+      score.textContent = state.score;
+      moves.textContent = state.moves;
+      stateTxt.textContent = state.win ? 'WYGRAŁEŚ' : 'normalnie';
+      title.textContent = room.t;
+      sub.textContent = room.s;
+      story.textContent = room.st;
+      el('prev').disabled = state.room === 0;
+      el('next').disabled = state.room === 19;
+      el('solve').disabled = state.done[state.room];
+      el('solve').textContent = state.done[state.room] ? 'już zrobione' : 'Zaznacz jako zrobione';
+      renderItems();
+      renderNav();
+      renderPuzzle();
+    }
+
+    el('prev').onclick = () => {
+      if (state.room > 0) {
+        state.room--;
+        state.moves++;
+        render();
+      }
+    };
+
+    el('next').onclick = () => {
+      if (state.room < 19) {
+        if (state.open.has(state.room + 2) || state.done[state.room + 1]) {
+          state.room++;
+          state.moves++;
+          render();
+        } else {
+          showStatus('Ten pokój jeszcze nie odblokowany.', false);
+        }
+      }
+    };
+
+    el('solve').onclick = () => {
+      const room = current();
+      if (!state.done[state.room]) {
+        state.done[state.room] = true;
+        state.score += 5;
+        if (room.r) addItem(room.r);
+        (room.n || []).forEach(x => state.open.add(x));
+        showStatus('Pokój zapisany jako ukończony.', true);
+        addLog('Ręcznie oznaczono pokój ' + (state.room + 1));
+        if (state.room === 19) {
+          state.win = true;
+          overlay.classList.add('show');
+          finalInfo.textContent = 'Punkty: ' + state.score + ' | Ruchy: ' + state.moves + ' | Itemy: ' + state.inv.length;
+        }
+        render();
+      }
+    };
+
+    function resetGame() {
+      state = {
+        room: 0,
+        score: 0,
+        moves: 0,
+        done: Array(20).fill(false),
+        inv: [],
+        open: new Set([1]),
+        win: false
+      };
+      overlay.classList.remove('show');
+      log.innerHTML = '';
+      addLog('Gra zrestartowana.');
+      render();
+    }
+
+    el('reset').onclick = resetGame;
+    el('again').onclick = resetGame;
+    overlay.onclick = e => { if (e.target === overlay) overlay.classList.remove('show'); };
+
+    addLog('Start gry.');
+    render();
+  </script>
+</body>
+</html>
